@@ -1,0 +1,20 @@
+[project]
+name = "vsu-web"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "contextily>=1.6.2",
+    "geopandas>=1.1.0",
+    "matplotlib-scalebar>=0.9.0",
+    "matplotlib>=3.10.3",
+    "streamlit-folium>=0.25.0",
+    "streamlit>=1.45.1",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29.5",
+    "py-wanderer>=1.0.4",
+]
