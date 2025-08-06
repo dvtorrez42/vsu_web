@@ -127,6 +127,7 @@ def main() -> None:
             with st.spinner("Calculando Ambientes del Paisaje...", show_time=True):
                 plot_ambientes_paisaje(
                     predio, 
+                    region=region,
                     distancia_paisaje_metros=distancia_paisaje, 
                     intervalo_buffer_metros=intervalo,
                 )

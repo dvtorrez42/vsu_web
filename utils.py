@@ -77,18 +77,18 @@ def plot_degradacion_acumulada_dimension(
     # Create buffer distances programmatically
     # Maximum buffer distance
 
-    distancias_buffer = list(range(intervalo_buffer_metros, distancia_paisaje_metros + intervalo_buffer_metros, intervalo_buffer_metros))  # Creates [500, 1000, 1500, ..., 5000]
+    distancias_buffer = list(range(intervalo_buffer_metros, (distancia_paisaje_metros + intervalo_buffer_metros), intervalo_buffer_metros))  # Creates [500, 1000, 1500, ..., 5000]
     #st.write("Distancias de buffer:", distancias_buffer)
     max_buffer = max(distancias_buffer)
 
     predio_original = predio.to_crs(32721) 
     valores_indicador_dimensiones = []
 
-    file_name = "Predio NN"  #todo: CAMBIAR  #  os.path.splitext(os.path.basename(predios_path))[0] # para usar despues como nombre del predio en figuras
+    file_name = "Predio"  #todo: CAMBIAR  #  os.path.splitext(os.path.basename(predios_path))[0] # para usar despues como nombre del predio en figuras
 
     # crear BUFFER de la region alrededor del predio
     extension = max_buffer + intervalo_buffer_metros
-    region = region  #! variable
+    region = region
 
 
     predio_region = predio_original.copy()
@@ -105,7 +105,7 @@ def plot_degradacion_acumulada_dimension(
     dimensiones_list_region = [dim_1_region, dim_2_region, dim_3_region]
 
     #### Mover el predio aleatoriamente
-    replicas = replicas  #! hacer variable
+    replicas = replicas  
     max_metros = region - extension # para que el buffer de 5000 metros nunca se salga de la región de 10000
     desplazamientos_x = []
     desplazamientos_y = []
@@ -160,13 +160,13 @@ def plot_degradacion_acumulada_dimension(
                 # paisaje_buf = dimension_buf.overlay(predio, how="difference")   #  DIMENSION cortada por BUFFER agujereada con el predio = le llamamos "paisaje"
                 paisaje_buf = dimension_buf
                 #  Agregamos columna de área en hectáreas
-                paisaje_buf["area_Ha"] = paisaje_buf.area/10000
+                paisaje_buf["area_Ha"] = paisaje_buf.area/10_000
                 #  Calculo del indicador para ese paisaje
                 paisaje_buf["indicador_parche"] = paisaje_buf["area_Ha"] * paisaje_buf["INDICADOR"]
                 #
                 paisaje_indicador = paisaje_buf["indicador_parche"].sum()
                 #
-                out = round((((paisaje_indicador) / (dimension_buf.area.sum()/10000)) - region_promedio) , 4)
+                out = round((((paisaje_indicador) / (dimension_buf.area.sum()/10_000)) - region_promedio) , 4)
 
                 out = 0 if out > 0 else out # quedarse solo con los valores negativos (0 si es positivo)
                 try:
@@ -258,13 +258,14 @@ def plot_degradacion_acumulada_dimension(
     #     'DIM_filtradoH2O_MB_poligonos': 'Mantenimiento de calidad de H2O'
     # }
 
-    ubicacion_lineas = [5000,5030,5060]
+    # ubicacion_lineas = [5000,5030,5060]
+    ubicacion_lineas = [max_buffer, max_buffer + 30, max_buffer + 60]  # Adjusted for the new max buffer distance
 
     fig = plt.figure(figsize=(8, 4))
 
     for i, dimension in enumerate(percentiles.index):
         # Filter data for the current dimension and the first series (10 records)
-        df_dim = df[(df['Dimension'] == dimension)].head(10)
+        df_dim = df[(df['Dimension'] == dimension)].head(len(distancias_buffer)) #! qué es?
 
         # Plot indicator_value vs buffer_distance
         plt.plot(df_dim['Buffer_Distance'], df_dim['Indicator_Value'],
@@ -411,7 +412,7 @@ def plot_valores_conservacion(
 
 def plot_ambientes_paisaje(
         predio, 
-        #region=10_000,
+        region=10_000,
         distancia_paisaje_metros=5_000, 
         intervalo_buffer_metros=500,
     ):
@@ -421,15 +422,19 @@ def plot_ambientes_paisaje(
     # Lista con buffers a usar
     distancias_buffer = list(range(intervalo_buffer_metros, distancia_paisaje_metros + intervalo_buffer_metros, intervalo_buffer_metros))  # Creates [500, 1000, 1500, ..., 5000]
 
+    # Lista con buffers a usar
+    max_buffer = max(distancias_buffer)
+    extension = max_buffer + intervalo_buffer_metros
+    
     predio_original = predio.to_crs(32721)
     valores_indicador_dimensiones = []
 
     predio_extension = predio_original.copy()
-    predio_extension["geometry"] = predio_original.buffer(5500)
+    predio_extension["geometry"] = predio_original.buffer(extension)
 
     #crear BUFFER de la region alrededor del predio
     predio_region = predio_original.copy()
-    predio_region["geometry"] = predio_original.buffer(10000)
+    predio_region["geometry"] = predio_original.buffer(region)
     promedios_tabla = []
 
     # este loopea por todas las dimensiones
