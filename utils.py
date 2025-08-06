@@ -57,7 +57,7 @@ def plot_degradacion_acumulada_dimension(
         region=10_000,
         distancia_paisaje_metros=5_000, 
         intervalo_buffer_metros=500,
-        replicas=250,
+        replicas=100,
         percentil_inferior=0.33,
         percentil_superior=0.66,
     ):
@@ -521,7 +521,11 @@ def load_ambientes():
 def configure_page() -> None:
     st.set_page_config(page_title="Streamlit App", page_icon=":guardsman:", layout="wide")  # TODO: Cambiar nombre de la pestaña
 
-def plot_predio_ambientes(predio):
+def plot_predio_ambientes(
+        predio,
+        region=10_000,
+        distancia_paisaje_metros=5_000,
+    ):
     if predio is not None:
         predio = predio.to_crs(32721)  # Convertir a UTM zona 21S
         predio_extension = predio.copy()
@@ -529,10 +533,10 @@ def plot_predio_ambientes(predio):
 
         # crear BUFFER de la region alrededor del predio
         predio_region = predio.copy()
-        predio_region["geometry"] = predio.buffer(10000)
+        predio_region["geometry"] = predio.buffer(region)
 
         # Lista con buffers a usar
-        distancias_buffer = [0, 5000, 10000]
+        distancias_buffer = [0, distancia_paisaje_metros, region]
             
         frag, rep, filt = load_ambientes()
         frag = frag.overlay(predio_extension, how='intersection')

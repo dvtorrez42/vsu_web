@@ -60,7 +60,7 @@ def main() -> None:
                 region = st.number_input("Región (metros)", min_value=None, value=10_000, max_value=None, step=1_000)  # región sin valor máximo
                 distancia_paisaje = st.number_input("Distancia Paisaje del Predio (metros)", min_value=100, value=5_000, max_value=None, step=1_000)  #todo: cambiar a distancia paisaje
                 intervalo = st.number_input("Intervalo (metros) (=>100, =<distancia paisaje)", min_value=100, value=500, max_value=None, step=1)
-                replicas = st.number_input("Réplicas", min_value=1, value=250, max_value=500, step=10)
+                replicas = st.number_input("Réplicas", min_value=1, value=100, max_value=500, step=10)
                 percentil_inferior = st.number_input("Percentil Inferior", min_value=None, value=0.33, max_value=None)
                 percentil_superior = st.number_input("Percentil Superior", min_value=None, value=0.66, max_value=None)
                 st.form_submit_button(label="Aplicar parámetros")
@@ -97,7 +97,7 @@ def main() -> None:
         if predio is not None:
             st.markdown("# Predio en el paisaje")
             with st.spinner("Mapeando el predio en el paisaje...", show_time=True): 
-                plot_predio_ambientes(predio)
+                plot_predio_ambientes(predio, region=region, distancia_paisaje_metros=distancia_paisaje)
             st.success("Listo!")
             
             st.markdown("# Degradación acumulada por Dimensión")
