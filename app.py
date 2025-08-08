@@ -7,7 +7,6 @@ import geopandas as gpd
 
 import contextily as ctx
 
-
 from utils import (
     configure_page,
     configure_overview,
@@ -24,23 +23,23 @@ def main() -> None:
     
     configure_page()
 
-    if "form_values" not in st.session_state:
-        st.session_state.form_values = {
-            "r21": None,
-            "r22": None,
-            "r23": None,
-            "r24": None,    
-            "r25": None,
-            "r31": None,
-            "r32": None,
-            "r33": None,
-            "r34": None,
-            "r35": None,
-            "r36": None,
-            "r37": None,
-            "r38": None,
-            "r39": None,
-        }
+    # if "form_values" not in st.session_state:
+    #     st.session_state.form_values = {
+    #         "r21": None,
+    #         "r22": None,
+    #         "r23": None,
+    #         "r24": None,    
+    #         "r25": None,
+    #         "r31": None,
+    #         "r32": None,
+    #         "r33": None,
+    #         "r34": None,
+    #         "r35": None,
+    #         "r36": None,
+    #         "r37": None,
+    #         "r38": None,
+    #         "r39": None,
+    #     }
 
     if "predio" not in st.session_state:
         st.session_state.predio = None
@@ -50,9 +49,10 @@ def main() -> None:
     col1, col2 = st.columns([2, 1])
 
     predio = st.session_state.predio
-    form_values = st.session_state.form_values
+    #form_values = st.session_state.form_values
 
     with col1:
+        st.markdown("# Herramienta cambiar nombre")
         st.markdown("## Parámetros para el análisis")
         with st.form(key="analysis_params"):
             col_dist, col_perc = st.columns(2)
@@ -71,8 +71,8 @@ def main() -> None:
             if percentil_inferior >= percentil_superior:
                 st.error("El percentil inferior debe ser menor que el percentil superior.")
                 
-        st.markdown("# Entrada de datos")
-        st.markdown("## 1. Primera parte")
+        st.markdown("## Entrada de datos")
+        st.markdown("### 1. Primera parte")
         st.markdown("Subir el predio en formato KML o KMZ para visualizarlo en el mapa y realizar análisis.")
         uploaded_file = st.file_uploader("Subir archivo KML", type=["kml", "kmz"])
         if uploaded_file is not None:
@@ -95,12 +95,12 @@ def main() -> None:
                 st.success("Archivo procesado correctamente.")
         
         if predio is not None:
-            st.markdown("# Predio en el paisaje")
+            st.markdown("## Predio en el paisaje")
             with st.spinner("Mapeando el predio en el paisaje...", show_time=True): 
                 plot_predio_ambientes(predio, region=region, distancia_paisaje_metros=distancia_paisaje)
-            st.success("Listo!")
+            st.success("Listo, predio ploteado!")
             
-            st.markdown("# Degradación acumulada por Dimensión")
+            st.markdown("## Degradación acumulada por Dimensión")
             with st.spinner("Calculando Degradación Acumulada por Dimensión...", show_time=True):
                 plot_degradacion_acumulada_dimension(
                     predio, 
@@ -113,7 +113,7 @@ def main() -> None:
                     )
             st.success("Listo!")
             
-            st.markdown("# Valores de Conservación")
+            st.markdown("## Valores de Conservación")
             with st.spinner("Calculando Valores de Conservación...", show_time=True):
                 plot_valores_conservacion(
                     predio, 
@@ -123,7 +123,7 @@ def main() -> None:
                 )
             st.success("Listo!")    
                 
-            st.markdown("# Ambientes del paisaje")
+            st.markdown("## Ambientes del paisaje")
             with st.spinner("Calculando Ambientes del Paisaje...", show_time=True):
                 plot_ambientes_paisaje(
                     predio, 
@@ -136,13 +136,13 @@ def main() -> None:
         elif predio is not None:
             st.write("### No todos los valores son distintos de None en form_values")
             
-    with col2:
-        st.markdown("# Formulario (opcional)")
-        # Mostrar el formulario si predio está definido y no es None
-        if predio is not None:  #todo: cambiar por if todos los graficosya se mostraron
-            def on_form_submit(updated_values):
-                st.session_state.form_values.update(updated_values)
-            configure_form(form_values)
+    # with col2:
+    #     st.markdown("# Formulario (opcional)")
+    #     # Mostrar el formulario si predio está definido y no es None
+    #     if predio is not None:  #todo: cambiar por if todos los graficosya se mostraron
+    #         def on_form_submit(updated_values):
+    #             st.session_state.form_values.update(updated_values)
+    #         configure_form(form_values)
         
 
 if __name__ == "__main__":

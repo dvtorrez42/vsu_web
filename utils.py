@@ -519,7 +519,7 @@ def load_ambientes():
     return fragmentacion, representacion, filtrado
 
 def configure_page() -> None:
-    st.set_page_config(page_title="Streamlit App", page_icon=":guardsman:", layout="wide")  # TODO: Cambiar nombre de la pestaña
+    st.set_page_config(page_title="VSU App", page_icon=":guardsman:", layout="wide")  # TODO: Cambiar nombre de la pestaña
 
 def plot_predio_ambientes(
         predio,
