@@ -302,9 +302,7 @@ def plot_degradacion_acumulada_dimension(
 
     for i, dimension in enumerate(percentiles.index):
         # Filter data for the current dimension and the first series (10 records)
-        df_dim = df[(df["Dimension"] == dimension)].head(
-            len(distancias_buffer)
-        )  #! qué es?
+        df_dim = df[(df["Dimension"] == dimension)].head(len(distancias_buffer))
 
         # Plot indicator_value vs buffer_distance
         plt.plot(
@@ -627,20 +625,12 @@ def plot_ambientes_paisaje(
         st.pyplot(fig)
 
 
-def load_ambientes():
-    fragmentacion = gpd.read_file("./dimensiones/DIM_fragmentacion_TEM_celdas.shp")
-    representacion = gpd.read_file("./dimensiones/DIM_representacion_MB_celdas.shp")
-    filtrado = gpd.read_file("./dimensiones/DIM_filtradoH2O_MB_poligonos.shp")
-
-    return fragmentacion, representacion, filtrado
-
-
 def configure_page() -> None:
     st.set_page_config(
         page_title="Visualizador Vida Silvestre Uruguay",
         page_icon=":guardsman:",
         layout="wide",
-    )  # TODO: Cambiar nombre de la pestaña
+    )
 
 
 def plot_predio_ambientes(
@@ -649,9 +639,12 @@ def plot_predio_ambientes(
     distancia_paisaje_metros=5_000,
 ):
     if predio is not None:
+        # Lista con ambientes
+        # dimensiones_list = [value["path"] for value in AMBIENTES_DICT.values()]
+
         predio = predio.to_crs(32721)  # Convertir a UTM zona 21S
         predio_extension = predio.copy()
-        predio_extension["geometry"] = predio.buffer(15000)
+        predio_extension["geometry"] = predio.buffer(region + distancia_paisaje_metros)
 
         # crear BUFFER de la region alrededor del predio
         predio_region = predio.copy()
@@ -660,26 +653,35 @@ def plot_predio_ambientes(
         # Lista con buffers a usar
         distancias_buffer = [0, distancia_paisaje_metros, region]
 
-        frag, rep, filt = load_ambientes()
-        frag = frag.overlay(predio_extension, how="intersection")
-        rep = rep.overlay(predio_extension, how="intersection")
-        filt = filt.overlay(predio_extension, how="intersection")
+        # frag = gpd.read_file("./dimensiones/DIM_fragmentacion_TEM_celdas.shp")
+        # rep = gpd.read_file("./dimensiones/DIM_representacion_MB_celdas.shp")
+        # filt = gpd.read_file("./dimensiones/DIM_filtradoH2O_MB_poligonos.shp")
 
-        _lock = RLock()
-        with _lock:
-            fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16, 6))
+        # frag = frag.overlay(predio_extension, how="intersection")
+        # rep = rep.overlay(predio_extension, how="intersection")
+        # filt = filt.overlay(predio_extension, how="intersection")
+
+        for i, dim in enumerate(DIMENSIONES_DICT.values()):
+            dimension = gpd.read_file(dim["path"])
+            dimension = dimension.overlay(predio_extension, how="intersection")
+
+            fig, ax = plt.subplots(figsize=(8, 4))
+
             fig.set_facecolor("ghostwhite")
 
-            # Ambiente 1
-            ax1.set_title("Fragmentación")
-            ax1.add_artist(ScaleBar(1))
+            ax.set_title(dim["label"])
+            ax.add_artist(ScaleBar(1))
 
-            # Plot first map with custom legend
-            cax1 = fig.add_axes([0.29, 0.1, 0.01, 0.15])  # [x, y, width, height]
-            frag_plot = frag.plot(
-                column="INDICADOR", ax=ax1, cmap="Greens", vmin=0, vmax=1, legend=False
+            # cax1 = fig.add_axes([0.29, 0.1, 0.01, 0.15])  # [x, y, width, height]
+            dimension.plot(
+                column="INDICADOR",
+                ax=ax,
+                cmap=dim["color_map"],
+                vmin=0,
+                vmax=1,
+                legend=True,
             )
-            fig.colorbar(frag_plot.collections[0], cax=cax1)
+            # fig.colorbar(dimension_plot.collections[0], cax=cax1)
 
             for buf in distancias_buffer:
                 #  Crear BUFFER del predio
@@ -688,265 +690,209 @@ def plot_predio_ambientes(
 
                 # Plot buffer
                 buf_color = "red" if buf == 0 else "gray"
-                predio_buf.boundary.plot(ax=ax1, color=buf_color)
+                predio_buf.boundary.plot(ax=ax, color=buf_color)
 
-            ax1.set_xlim(
+            ax.set_xlim(
                 predio_buf.total_bounds[0] - 500, predio_buf.total_bounds[2] + 500
             )
-            ax1.set_ylim(
+            ax.set_ylim(
                 predio_buf.total_bounds[1] - 500, predio_buf.total_bounds[3] + 500
             )
 
-            ax1.set_xticks([])
-            ax1.set_yticks([])
-
-            # Ambiente 2
-            ax2.set_title("Representación")
-            ax2.add_artist(ScaleBar(1))
-
-            # Plot second map with custom legend
-            cax2 = fig.add_axes([0.615, 0.1, 0.01, 0.15])  # [x, y, width, height]
-            rep_plot = rep.plot(
-                column="INDICADOR", ax=ax2, cmap="Greys", vmin=0, vmax=1, legend=False
-            )
-            fig.colorbar(rep_plot.collections[0], cax=cax2)
-
-            for buf in distancias_buffer:
-                #  Crear BUFFER del predio
-                predio_buf = predio.copy()
-                predio_buf["geometry"] = predio_buf.buffer(buf)
-
-                # Plot buffer
-                buf_color = "red" if buf == 0 else "gray"
-                predio_buf.boundary.plot(ax=ax2, color=buf_color)
-
-            ax2.set_xlim(
-                predio_buf.total_bounds[0] - 500, predio_buf.total_bounds[2] + 500
-            )
-            ax2.set_ylim(
-                predio_buf.total_bounds[1] - 500, predio_buf.total_bounds[3] + 500
-            )
-
-            ax2.set_xticks([])
-            ax2.set_yticks([])
-
-            # Ambiente 3
-            ax3.set_title("Filtrado")
-            ax3.add_artist(ScaleBar(1))
-
-            # Plot second map with custom legend
-            cax3 = fig.add_axes([0.937, 0.1, 0.01, 0.15])  # [x, y, width, height]
-            filt_plot = filt.plot(
-                column="INDICADOR", ax=ax3, cmap="Blues", vmin=0, vmax=1, legend=False
-            )
-            fig.colorbar(filt_plot.collections[0], cax=cax3)
-
-            for buf in distancias_buffer:
-                #  Crear BUFFER del predio
-                predio_buf = predio.copy()
-                predio_buf["geometry"] = predio_buf.buffer(buf)
-
-                # Plot buffer
-                buf_color = "red" if buf == 0 else "gray"
-                predio_buf.boundary.plot(ax=ax3, color=buf_color)
-
-            ax3.set_xlim(
-                predio_buf.total_bounds[0] - 500, predio_buf.total_bounds[2] + 500
-            )
-            ax3.set_ylim(
-                predio_buf.total_bounds[1] - 500, predio_buf.total_bounds[3] + 500
-            )
-
-            ax3.set_xticks([])
-            ax3.set_yticks([])
-
-            # Adjust spacing
-            plt.tight_layout(rect=[0, 0, 0.98, 1])
-
+            ax.set_xticks([])
+            ax.set_yticks([])
             st.pyplot(fig)
 
+            # fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16, 6))
+            # fig.set_facecolor("ghostwhite")
 
-def plot_predio_ambientes_largo(predio):
-    if predio is not None:
-        _lock = RLock()
-        with _lock:
-            predio = predio.to_crs(32721)  # Convertir a UTM zona 21S
-            predio_extension = predio.copy()
-            predio_extension["geometry"] = predio.buffer(15000)
+            # # Ambiente 1
+            # ax1.set_title("Fragmentación")
+            # ax1.add_artist(ScaleBar(1))
 
-            # crear BUFFER de la region alrededor del predio
-            predio_region = predio.copy()
-            predio_region["geometry"] = predio.buffer(10000)
+            # # Plot first map with custom legend
+            # cax1 = fig.add_axes([0.29, 0.1, 0.01, 0.15])  # [x, y, width, height]
+            # frag_plot = frag.plot(
+            #     column="INDICADOR", ax=ax1, cmap="Greens", vmin=0, vmax=1, legend=False
+            # )
+            # fig.colorbar(frag_plot.collections[0], cax=cax1)
 
-            # Lista con buffers a usar
-            distancias_buffer = [0, 5000, 10000]
+            # for buf in distancias_buffer:
+            #     #  Crear BUFFER del predio
+            #     predio_buf = predio.copy()
+            #     predio_buf["geometry"] = predio.buffer(buf)
 
-            # este loopea por todas las dimensiones
-            for dim in DIMENSIONES_DICT.values():
-                dimension = gpd.read_file(dim["path"])
-                dimension = dimension.overlay(predio_extension, how="intersection")
+            #     # Plot buffer
+            #     buf_color = "red" if buf == 0 else "gray"
+            #     predio_buf.boundary.plot(ax=ax1, color=buf_color)
 
-                fig, ax = plt.subplots()
+            # ax1.set_xlim(
+            #     predio_buf.total_bounds[0] - 500, predio_buf.total_bounds[2] + 500
+            # )
+            # ax1.set_ylim(
+            #     predio_buf.total_bounds[1] - 500, predio_buf.total_bounds[3] + 500
+            # )
 
-                # Remove axis ticks and labels
-                ax.set_xticks([])
-                ax.set_yticks([])
+            # ax1.set_xticks([])
+            # ax1.set_yticks([])
 
-                # Optionally remove axis spines for a cleaner look
-                ax.spines["top"].set_visible(False)
-                ax.spines["right"].set_visible(False)
-                ax.spines["left"].set_visible(False)
-                ax.spines["bottom"].set_visible(False)
+            # # Ambiente 2
+            # ax2.set_title("Representación")
+            # ax2.add_artist(ScaleBar(1))
 
-                # este loop calcula el indicador para cada buffer de una dimensión
-                for buf in distancias_buffer:
-                    #  Crear BUFFER del predio
-                    predio_buf = predio.copy()
-                    predio_buf["geometry"] = predio.buffer(buf)
+            # # Plot second map with custom legend
+            # cax2 = fig.add_axes([0.615, 0.1, 0.01, 0.15])  # [x, y, width, height]
+            # rep_plot = rep.plot(
+            #     column="INDICADOR", ax=ax2, cmap="Greys", vmin=0, vmax=1, legend=False
+            # )
+            # fig.colorbar(rep_plot.collections[0], cax=cax2)
 
-                    # Plot buffer
-                    buf_color = "black" if buf == 0 else "gray"
-                    predio_buf.boundary.plot(ax=ax, color=buf_color)
+            # for buf in distancias_buffer:
+            #     #  Crear BUFFER del predio
+            #     predio_buf = predio.copy()
+            #     predio_buf["geometry"] = predio_buf.buffer(buf)
 
-                ax.set_xlim(
-                    predio_buf.total_bounds[0] - 500, predio_buf.total_bounds[2] + 500
-                )
-                ax.set_ylim(
-                    predio_buf.total_bounds[1] - 500, predio_buf.total_bounds[3] + 500
-                )
+            #     # Plot buffer
+            #     buf_color = "red" if buf == 0 else "gray"
+            #     predio_buf.boundary.plot(ax=ax2, color=buf_color)
 
-                st.pyplot(fig)
+            # ax2.set_xlim(
+            #     predio_buf.total_bounds[0] - 500, predio_buf.total_bounds[2] + 500
+            # )
+            # ax2.set_ylim(
+            #     predio_buf.total_bounds[1] - 500, predio_buf.total_bounds[3] + 500
+            # )
+
+            # ax2.set_xticks([])
+            # ax2.set_yticks([])
+
+            # # Ambiente 3
+            # ax3.set_title("Filtrado")
+            # ax3.add_artist(ScaleBar(1))
+
+            # # Plot second map with custom legend
+            # cax3 = fig.add_axes([0.937, 0.1, 0.01, 0.15])  # [x, y, width, height]
+            # filt_plot = filt.plot(
+            #     column="INDICADOR", ax=ax3, cmap="Blues", vmin=0, vmax=1, legend=False
+            # )
+            # fig.colorbar(filt_plot.collections[0], cax=cax3)
+
+            # for buf in distancias_buffer:
+            #     #  Crear BUFFER del predio
+            #     predio_buf = predio.copy()
+            #     predio_buf["geometry"] = predio_buf.buffer(buf)
+
+            #     # Plot buffer
+            #     buf_color = "red" if buf == 0 else "gray"
+            #     predio_buf.boundary.plot(ax=ax3, color=buf_color)
+
+            # ax3.set_xlim(
+            #     predio_buf.total_bounds[0] - 500, predio_buf.total_bounds[2] + 500
+            # )
+            # ax3.set_ylim(
+            #     predio_buf.total_bounds[1] - 500, predio_buf.total_bounds[3] + 500
+            # )
+
+            # ax3.set_xticks([])
+            # ax3.set_yticks([])
+
+            # # Adjust spacing
+            # plt.tight_layout(rect=[0, 0, 0.98, 1])
+
+            # st.pyplot(fig)
 
 
-def configure_overview() -> None:
-    st.markdown("# Indicador de Paisaje")  # TODO: Cambiar nombre del título
-    st.markdown("Indicador etc.")
-    st.markdown("pin pun pan")
+# def configure_form(form_values):
+#     with st.form("Datos del campo", clear_on_submit=False):
+#         st.markdown("### 2. Condicionantes según características generales del predio")
+#         form_values["r21"] = st.radio(
+#             "2.1 ¿Cuerpo de agua (semi)permanente dentro del predio o cercano?",
+#             ("Sí", "No", "Sin Dato", "Ninguna"),
+#             horizontal=True,
+#             index=3,
+#         )
+#         form_values["r22"] = st.radio(
+#             "2.2 Proporción de ambientes naturales continuos (tamaño efectivo de la malla)",
+#             ("Sí", "No", "Sin Dato", "Ninguna"),
+#             horizontal=True,
+#             index=3,
+#         )
+#         form_values["r23"] = st.radio(
+#             "2.3 ¿Contiene humedal (o debería)?",
+#             ("Sí", "No", "Sin Dato", "Ninguna"),
+#             horizontal=True,
+#             index=3,
+#         )
+#         form_values["r24"] = st.radio(
+#             "2.4 ¿Contiene bosque (o debería)?",
+#             ("Sí", "No", "Sin Dato", "Ninguna"),
+#             horizontal=True,
+#             index=3,
+#         )
+#         form_values["r25"] = st.radio(
+#             "2.5 ¿Contiene pastizal (o debería)?",
+#             ("Sí", "No", "Sin Dato", "Ninguna"),
+#             horizontal=True,
+#             index=3,
+#         )
 
-    with st.container():
-        st.markdown("""
-            > « Lorem ipsum dolor sit amet, consectetur adipisci elit, sed eiusmod tempor incidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur. Quis aute iure reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. » 
-        """)
+#         st.markdown("### 3. Condicionantes según diagnóstico ambiental")
+#         form_values["r31"] = st.radio(
+#             "3.1 Proporción de zona riparia con cobertura vegetal natural",
+#             ("Baja", "Media", "Alta", "Sin Dato", "Ninguna"),
+#             horizontal=True,
+#             index=4,
+#         )
+#         form_values["r32"] = st.radio(
+#             "3.2 Estructura de la vegetación en zona buffer",
+#             ("Baja", "Media", "Alta", "Sin Dato", "Ninguna"),
+#             horizontal=True,
+#             index=4,
+#         )
+#         form_values["r33"] = st.radio(
+#             "3.3 ¿Erosión observada o riesgo de erosión alto?",
+#             ("Sí", "No", "Sin Dato", "Ninguna"),
+#             horizontal=True,
+#             index=3,
+#         )
+#         form_values["r34"] = st.radio(
+#             "3.4 ¿El ganado accede a cuerpos de agua?",
+#             ("Sí", "No", "Sin Dato", "Ninguna"),
+#             horizontal=True,
+#             index=3,
+#         )
+#         form_values["r35"] = st.radio(
+#             "3.5 ¿Uso de agroquímicos conalto riesgo de contaminación?",
+#             ("Sí", "No", "Sin Dato", "Ninguna"),
+#             horizontal=True,
+#             index=3,
+#         )
+#         form_values["r36"] = st.radio(
+#             "3.6 Continuidad de parches de ecosistemas naturales",
+#             ("Baja", "Media", "Alta", "Sin Dato", "Ninguna"),
+#             horizontal=True,
+#             index=4,
+#         )
+#         form_values["r37"] = st.radio(
+#             "3.7 Integridad ecológica de parches de ecosistemas naturales",
+#             ("Baja", "Media", "Alta", "Sin Dato", "Ninguna"),
+#             horizontal=True,
+#             index=4,
+#         )
+#         form_values["r38"] = st.radio(
+#             "3.8 Proporción de ecosistemas naturales en el predio",
+#             ("Baja", "Media", "Alta", "Sin Dato", "Ninguna"),
+#             horizontal=True,
+#             index=4,
+#         )
+#         form_values["r39"] = st.radio(
+#             "3.9 Estado de conservación de parches",
+#             ("Baja", "Media", "Alta", "Sin Dato", "Ninguna"),
+#             horizontal=True,
+#             index=4,
+#         )
 
-    with st.container():
-        df = pd.DataFrame(
-            {
-                "Command": [
-                    "***Aumentar Cobertura Vegetal***",
-                    "***Mejorar Integridad de Cobertura***",
-                ],
-                "Type": [
-                    "Generar o mejorar zona de amortiguación no ribereña",
-                    "Mejorar zona buffer ribereña",
-                ],
-            }
-        )
-    st.table(df)
-
-    # # Create a download button for fig1
-    # buffer = BytesIO()
-    # fig1.savefig(buffer, format="png")
-    # buffer.seek(0)
-
-    # st.download_button(
-    #     label="Descargar Mapa 1",
-    #     data=buffer,
-    #     file_name="environment_map.png",
-    #     mime="image/png",
-    # )
-
-
-def configure_form(form_values):
-    with st.form("Datos del campo", clear_on_submit=False):
-        st.markdown("### 2. Condicionantes según características generales del predio")
-        form_values["r21"] = st.radio(
-            "2.1 ¿Cuerpo de agua (semi)permanente dentro del predio o cercano?",
-            ("Sí", "No", "Sin Dato", "Ninguna"),
-            horizontal=True,
-            index=3,
-        )
-        form_values["r22"] = st.radio(
-            "2.2 Proporción de ambientes naturales continuos (tamaño efectivo de la malla)",
-            ("Sí", "No", "Sin Dato", "Ninguna"),
-            horizontal=True,
-            index=3,
-        )
-        form_values["r23"] = st.radio(
-            "2.3 ¿Contiene humedal (o debería)?",
-            ("Sí", "No", "Sin Dato", "Ninguna"),
-            horizontal=True,
-            index=3,
-        )
-        form_values["r24"] = st.radio(
-            "2.4 ¿Contiene bosque (o debería)?",
-            ("Sí", "No", "Sin Dato", "Ninguna"),
-            horizontal=True,
-            index=3,
-        )
-        form_values["r25"] = st.radio(
-            "2.5 ¿Contiene pastizal (o debería)?",
-            ("Sí", "No", "Sin Dato", "Ninguna"),
-            horizontal=True,
-            index=3,
-        )
-
-        st.markdown("### 3. Condicionantes según diagnóstico ambiental")
-        form_values["r31"] = st.radio(
-            "3.1 Proporción de zona riparia con cobertura vegetal natural",
-            ("Baja", "Media", "Alta", "Sin Dato", "Ninguna"),
-            horizontal=True,
-            index=4,
-        )
-        form_values["r32"] = st.radio(
-            "3.2 Estructura de la vegetación en zona buffer",
-            ("Baja", "Media", "Alta", "Sin Dato", "Ninguna"),
-            horizontal=True,
-            index=4,
-        )
-        form_values["r33"] = st.radio(
-            "3.3 ¿Erosión observada o riesgo de erosión alto?",
-            ("Sí", "No", "Sin Dato", "Ninguna"),
-            horizontal=True,
-            index=3,
-        )
-        form_values["r34"] = st.radio(
-            "3.4 ¿El ganado accede a cuerpos de agua?",
-            ("Sí", "No", "Sin Dato", "Ninguna"),
-            horizontal=True,
-            index=3,
-        )
-        form_values["r35"] = st.radio(
-            "3.5 ¿Uso de agroquímicos conalto riesgo de contaminación?",
-            ("Sí", "No", "Sin Dato", "Ninguna"),
-            horizontal=True,
-            index=3,
-        )
-        form_values["r36"] = st.radio(
-            "3.6 Continuidad de parches de ecosistemas naturales",
-            ("Baja", "Media", "Alta", "Sin Dato", "Ninguna"),
-            horizontal=True,
-            index=4,
-        )
-        form_values["r37"] = st.radio(
-            "3.7 Integridad ecológica de parches de ecosistemas naturales",
-            ("Baja", "Media", "Alta", "Sin Dato", "Ninguna"),
-            horizontal=True,
-            index=4,
-        )
-        form_values["r38"] = st.radio(
-            "3.8 Proporción de ecosistemas naturales en el predio",
-            ("Baja", "Media", "Alta", "Sin Dato", "Ninguna"),
-            horizontal=True,
-            index=4,
-        )
-        form_values["r39"] = st.radio(
-            "3.9 Estado de conservación de parches",
-            ("Baja", "Media", "Alta", "Sin Dato", "Ninguna"),
-            horizontal=True,
-            index=4,
-        )
-
-        st.form_submit_button("Guardar respuestas")
+#         st.form_submit_button("Guardar respuestas")
 
 
 def configure_sidebar():
